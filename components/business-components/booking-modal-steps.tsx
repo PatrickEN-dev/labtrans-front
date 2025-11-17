@@ -10,7 +10,7 @@ import {
   BookingDateTime,
   BookingAdditionalConfig,
 } from "./booking";
-import { fullBookingSchema, type BookingFormData } from "@/lib/booking-schemas";
+import { fullBookingSchema, type BookingFormData, validateStep } from "@/lib/booking-schemas";
 import { toast } from "sonner";
 import {
   FileText,
@@ -68,6 +68,7 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
       title: "",
       description: "",
       locationId: "",
+      customLocation: "",
       roomId: "",
       date: "",
       startTime: "",
@@ -75,7 +76,10 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
       managerId: "",
       numberOfParticipants: 1,
       hasVideoCall: false,
+      videoPlatform: "",
       hasRefreshments: false,
+      refreshmentQuantity: 0,
+      refreshmentDescription: "",
       equipmentNeeded: [],
       notes: "",
     },
@@ -90,18 +94,37 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
   const handleSubmit = useCallback(async () => {
     try {
       setIsSubmitting(true);
-
       const formData = form.getValues();
 
-      // Preparar dados para envio seguindo a interface CreateBookingData
-      const bookingData = {
+      let allStepsValid = true;
+      for (let i = 0; i < STEPS.length; i++) {
+        const validation = validateStep(i, formData);
+        if (!validation.success) {
+          allStepsValid = false;
+          const firstError =
+            validation.error?.issues[0]?.message || "Campos obrigatórios não preenchidos";
+          toast.error(`Erro no passo ${i + 1}: ${firstError}`);
+          setCurrentStep(i);
+          break;
+        }
+      }
+
+      if (!allStepsValid) return;
+
+      // Construir start_date e end_date no formato correto da API
+      const startDateTime = `${formData.date}T${formData.startTime}:00Z`;
+      const endDateTime = `${formData.date}T${formData.endTime}:00Z`;
+
+      const bookingData: CreateBookingData = {
         room: formData.roomId,
-        manager: formData.managerId || "",
-        start_date: formData.date || "",
-        end_date: formData.date || "", // Mesmo dia por enquanto
+        manager: formData.managerId,
+        start_date: startDateTime,
+        end_date: endDateTime,
         coffee_option: formData.hasRefreshments,
-        coffee_quantity: formData.hasRefreshments ? 1 : 0,
-        coffee_description: formData.hasRefreshments ? "Coffee break incluído" : "",
+        coffee_quantity: formData.hasRefreshments ? formData.refreshmentQuantity || 1 : 0,
+        coffee_description: formData.hasRefreshments
+          ? formData.refreshmentDescription || "Coffee break incluído"
+          : "",
       };
 
       await bookingsApi.createBooking(bookingData);
@@ -116,18 +139,22 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
   }, [form, bookingsApi, handleClose]);
 
   const handleNext = useCallback(async () => {
-    // Valida os campos do step atual
-    const isStepValid = await form.trigger();
+    const currentStepData = form.getValues();
+    console.log("Dados do step atual:", currentStep, currentStepData); // Debug
+    const validation = validateStep(currentStep, currentStepData);
+    console.log("Resultado da validação:", validation); // Debug
 
-    if (!isStepValid) {
-      toast.error("Por favor, preencha todos os campos obrigatórios");
-      return;
-    }
-
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep((prev) => prev + 1);
+    if (validation.success) {
+      if (currentStep < STEPS.length - 1) {
+        setCurrentStep((prev) => prev + 1);
+      } else {
+        await handleSubmit();
+      }
     } else {
-      await handleSubmit();
+      console.error("Erro de validação:", validation.error); // Debug
+      const firstError =
+        validation.error?.issues[0]?.message || "Campos obrigatórios não preenchidos";
+      toast.error(firstError);
     }
   }, [currentStep, form, handleSubmit]);
 
@@ -138,39 +165,52 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
   }, [currentStep]);
 
   const handleStepClick = useCallback(
-    async (stepIndex: number) => {
-      // Permitir voltar sempre, validar para avançar
+    (stepIndex: number) => {
+      // Só permitir navegar para steps anteriores ou o atual
       if (stepIndex <= currentStep) {
         setCurrentStep(stepIndex);
+        return;
+      }
+
+      // Para steps futuros, validar o step atual primeiro
+      const currentStepData = form.getValues();
+      const validation = validateStep(currentStep, currentStepData);
+      if (validation.success) {
+        setCurrentStep(stepIndex);
       } else {
-        const isValid = await form.trigger();
-        if (isValid) {
-          setCurrentStep(stepIndex);
-        } else {
-          toast.error("Preencha os campos obrigatórios antes de avançar.");
-        }
+        const firstError =
+          validation.error?.issues[0]?.message || "Preencha os campos obrigatórios";
+        toast.error(firstError);
       }
     },
     [currentStep, form]
   );
 
   const renderStepContent = useCallback(() => {
+    const stepProps = { form };
+
     switch (currentStep) {
       case 0:
-        return <BookingBasicInfo form={form} />;
+        return <BookingBasicInfo {...stepProps} />;
       case 1:
-        return <BookingLocation form={form} />;
+        return <BookingLocation {...stepProps} />;
       case 2:
-        return <BookingDateTime form={form} />;
+        return <BookingDateTime {...stepProps} />;
       case 3:
-        return <BookingAdditionalConfig form={form} />;
+        return <BookingAdditionalConfig {...stepProps} />;
       default:
         return null;
     }
   }, [currentStep, form]);
 
-  // Verifica se pode prosseguir para o próximo step
-  const canProceed = Object.keys(form.formState.errors).length === 0;
+  // Verificação simples do step atual
+  const checkCanProceed = () => {
+    const currentStepData = form.getValues();
+    const validation = validateStep(currentStep, currentStepData);
+    return validation.success;
+  };
+
+  const canProceed = checkCanProceed();
 
   const footer = (
     <div className="flex items-center justify-between px-6 py-4 border-t">
@@ -204,9 +244,9 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
     </div>
   );
 
-  // Mostra erros de validação se houver
-  const hasErrors = Object.keys(form.formState.errors).length > 0;
-  const firstError = Object.values(form.formState.errors)[0]?.message as string;
+  const formErrors = form.formState.errors;
+  const hasErrors = !canProceed && Object.keys(formErrors).length > 0;
+  const firstError = Object.values(formErrors)[0]?.message as string;
 
   return (
     <Modal
@@ -219,7 +259,6 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
       contentClassName="px-0"
     >
       <div className="px-6 pb-6">
-        {/* Stepper */}
         <div className="mb-6">
           <Stepper
             steps={STEPS}
@@ -230,14 +269,14 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
         </div>
 
         <div className="min-h-[400px]">
-          {hasErrors && (
+          {hasErrors && firstError && (
             <div className="mb-4 p-3 border border-red-200 bg-red-50 rounded-lg flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
               <span className="text-red-800 text-sm">{firstError}</span>
             </div>
           )}
 
-          <form onSubmit={form.handleSubmit(handleSubmit)}>{renderStepContent()}</form>
+          <div>{renderStepContent()}</div>
         </div>
       </div>
     </Modal>

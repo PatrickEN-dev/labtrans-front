@@ -1,40 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/components/generic-components/action-button";
 import { BookingModalSteps } from "./booking-modal-steps";
-import { Plus, Calendar, MapPin, BarChart3 } from "lucide-react";
+import { Plus, Calendar, MapPin, BarChart3, List } from "lucide-react";
 
 export function QuickActions() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-
-  const quickActions = [
-    {
-      icon: Plus,
-      label: "Nova Reserva",
-      primary: true,
-      onClick: () => setIsBookingModalOpen(true),
-    },
-    {
-      icon: Calendar,
-      label: "Ver Agenda",
-      primary: false,
-      onClick: () => console.log("Ver agenda"),
-    },
-    {
-      icon: MapPin,
-      label: "Gerenciar Salas",
-      primary: false,
-      onClick: () => console.log("Gerenciar salas"),
-    },
-    {
-      icon: BarChart3,
-      label: "Relatórios",
-      primary: false,
-      onClick: () => console.log("Relatórios"),
-    },
-  ];
 
   return (
     <>
@@ -44,21 +18,47 @@ export function QuickActions() {
           <CardDescription>Principais funcionalidades</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {quickActions.map((action, index) => (
-            <ActionButton
-              key={index}
-              icon={action.icon}
-              variant={action.primary ? "default" : "outline"}
-              className={
-                action.primary
-                  ? "w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
-                  : "w-full justify-start"
-              }
-              onClick={action.onClick}
-            >
-              {action.label}
+          <ActionButton
+            icon={Plus}
+            variant="default"
+            className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setIsBookingModalOpen(true)}
+          >
+            Nova Reserva
+          </ActionButton>
+
+          <Link href="/bookings" className="block">
+            <ActionButton icon={List} variant="outline" className="w-full justify-start">
+              Ver Todas as Reservas
             </ActionButton>
-          ))}
+          </Link>
+
+          <ActionButton
+            icon={Calendar}
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => console.log("Ver agenda")}
+          >
+            Ver Agenda
+          </ActionButton>
+
+          <ActionButton
+            icon={MapPin}
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => console.log("Gerenciar salas")}
+          >
+            Gerenciar Salas
+          </ActionButton>
+
+          <ActionButton
+            icon={BarChart3}
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => console.log("Relatórios")}
+          >
+            Relatórios
+          </ActionButton>
         </CardContent>
       </Card>
 

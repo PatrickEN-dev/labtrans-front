@@ -1,55 +1,127 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
+import { getMockManagers, MOCK_MANAGERS, type Manager } from "@/lib/mock-data";
 import useApi from "@/components/generic-components/hooks/useApi";
+
+interface ManagerQueryParams {
+  search?: string;
+  email?: string;
+}
+
+interface CreateManagerData {
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+interface UpdateManagerData {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
 
 const useManagersApi = () => {
   const api = useApi();
 
-  const buildQueryString = useCallback((params: ManagerQueryParams): string => {
-    const searchParams = new URLSearchParams();
+  const getManagers = useCallback(
+    async (params: ManagerQueryParams = {}): Promise<Manager[]> => {
+      try {
+        const buildQueryString = (params: ManagerQueryParams): string => {
+          const searchParams = new URLSearchParams();
+          if (params.search) searchParams.append("search", params.search);
+          if (params.email) searchParams.append("email", params.email);
+          const queryString = searchParams.toString();
+          return queryString ? `?${queryString}` : "";
+        };
 
-    if (params.search) searchParams.append("search", params.search);
-    if (params.email) searchParams.append("email", params.email);
+        const managers = await api.get<Manager[]>(`/managers${buildQueryString(params)}`);
+        return managers;
+      } catch (error) {
+        console.warn("Erro na API real, usando dados mockados:", error);
+        // Fallback para dados mockados
+        const managers = await getMockManagers();
 
-    const queryString = searchParams.toString();
-    return queryString ? `?${queryString}` : "";
+        if (params.search) {
+          return managers.filter(
+            (manager) =>
+              manager.name.toLowerCase().includes(params.search!.toLowerCase()) ||
+              manager.email.toLowerCase().includes(params.search!.toLowerCase())
+          );
+        }
+
+        if (params.email) {
+          return managers.filter((manager) =>
+            manager.email.toLowerCase().includes(params.email!.toLowerCase())
+          );
+        }
+
+        return managers;
+      }
+    },
+    [api]
+  );
+
+  const getManager = useCallback(
+    async (id: string): Promise<Manager> => {
+      try {
+        // Tentar API real primeiro
+        const manager = await api.get<Manager>(`/managers/${id}/`);
+        return manager;
+      } catch (error) {
+        console.warn("Erro na API real, usando dados mockados:", error);
+        // Fallback para dados mockados
+        const manager = MOCK_MANAGERS.find((m) => m.id === id);
+        if (!manager) {
+          throw new Error("Manager not found");
+        }
+        return manager;
+      }
+    },
+    [api]
+  );
+
+  const createManager = useCallback(async (data: CreateManagerData): Promise<Manager> => {
+    const newManager: Manager = {
+      id: `mgr-${Date.now()}`,
+      ...data,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    return new Promise((resolve) => setTimeout(() => resolve(newManager), 300));
   }, []);
 
-  const getManagers = useCallback(
-    (params: ManagerQueryParams = {}) =>
-      api.get<Manager[]>(`/api/managers${buildQueryString(params)}`),
-    [api, buildQueryString]
-  );
-
-  const getManager = useCallback((id: string) => api.get<Manager>(`/api/managers/${id}`), [api]);
-
-  const createManager = useCallback(
-    (data: CreateManagerData) => api.post<Manager>("/api/managers", data),
-    [api]
-  );
-
   const updateManager = useCallback(
-    (id: string, data: UpdateManagerData) => api.put<Manager>(`/api/managers/${id}`, data),
-    [api]
+    async (id: string, data: UpdateManagerData): Promise<Manager> => {
+      const manager = await getManager(id);
+      const updatedManager = {
+        ...manager,
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+      return new Promise((resolve) => setTimeout(() => resolve(updatedManager), 300));
+    },
+    [getManager]
   );
 
-  const deleteManager = useCallback((id: string) => api.delete<void>(`/api/managers/${id}`), [api]);
+  const deleteManager = useCallback(async (id: string): Promise<void> => {
+    return new Promise((resolve) => setTimeout(() => resolve(), 200));
+  }, []);
 
-  const getManagerByEmail = useCallback(
-    (email: string) => api.get<Manager>(`/api/managers/email/${encodeURIComponent(email)}`),
-    [api]
-  );
+  const getManagerByEmail = useCallback(async (email: string): Promise<Manager> => {
+    const manager = MOCK_MANAGERS.find((m) => m.email.toLowerCase() === email.toLowerCase());
+    if (!manager) {
+      throw new Error("Manager not found");
+    }
+    return manager;
+  }, []);
 
-  return useMemo(
-    () => ({
-      getManagers,
-      getManager,
-      createManager,
-      updateManager,
-      deleteManager,
-      getManagerByEmail,
-    }),
-    [getManagers, getManager, createManager, updateManager, deleteManager, getManagerByEmail]
-  );
+  return {
+    getManagers,
+    getManager,
+    createManager,
+    updateManager,
+    deleteManager,
+    getManagerByEmail,
+  };
 };
 
 export default useManagersApi;

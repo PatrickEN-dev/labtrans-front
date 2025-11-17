@@ -1,9 +1,13 @@
 import { useCallback } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+
 const useApi = () => {
   const request = useCallback(
-    async <T = unknown>(url: string, options: RequestInit = {}): Promise<T> => {
+    async <T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> => {
       try {
+        const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
+
         const response = await fetch(url, {
           headers: {
             "Content-Type": "application/json",
@@ -13,10 +17,18 @@ const useApi = () => {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error("API Error Response:", errorText);
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
 
-        return await response.json();
+        const responseText = await response.text();
+
+        if (!responseText) {
+          return null as T;
+        }
+
+        return JSON.parse(responseText) as T;
       } catch (error) {
         console.error("API request failed:", error);
         throw error;
@@ -25,28 +37,31 @@ const useApi = () => {
     []
   );
 
-  const get = useCallback(<T = unknown>(url: string): Promise<T> => request<T>(url), [request]);
+  const get = useCallback(
+    <T = unknown>(endpoint: string): Promise<T> => request<T>(endpoint),
+    [request]
+  );
 
   const post = useCallback(
-    <T = unknown>(url: string, data: unknown): Promise<T> =>
-      request<T>(url, { method: "POST", body: JSON.stringify(data) }),
+    <T = unknown>(endpoint: string, data: unknown): Promise<T> =>
+      request<T>(endpoint, { method: "POST", body: JSON.stringify(data) }),
     [request]
   );
 
   const put = useCallback(
-    <T = unknown>(url: string, data: unknown): Promise<T> =>
-      request<T>(url, { method: "PUT", body: JSON.stringify(data) }),
+    <T = unknown>(endpoint: string, data: unknown): Promise<T> =>
+      request<T>(endpoint, { method: "PUT", body: JSON.stringify(data) }),
     [request]
   );
 
   const patch = useCallback(
-    <T = unknown>(url: string, data: unknown): Promise<T> =>
-      request<T>(url, { method: "PATCH", body: JSON.stringify(data) }),
+    <T = unknown>(endpoint: string, data: unknown): Promise<T> =>
+      request<T>(endpoint, { method: "PATCH", body: JSON.stringify(data) }),
     [request]
   );
 
   const del = useCallback(
-    <T = unknown>(url: string): Promise<T> => request<T>(url, { method: "DELETE" }),
+    <T = unknown>(endpoint: string): Promise<T> => request<T>(endpoint, { method: "DELETE" }),
     [request]
   );
 

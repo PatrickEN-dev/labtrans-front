@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,8 +11,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Users, Coffee } from "lucide-react";
+import { Settings, Users, Coffee, Video } from "lucide-react";
 import useManagersApi from "../hooks/api/useManagersApi";
+
+interface Manager {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface BookingAdditionalConfigProps {
   form: any;
@@ -21,33 +27,40 @@ interface BookingAdditionalConfigProps {
 export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [managersLoaded, setManagersLoaded] = useState(false);
 
   const { setValue, watch, register } = form;
   const managerId = watch("managerId");
   const hasVideoCall = watch("hasVideoCall");
+  const videoPlatform = watch("videoPlatform");
   const hasRefreshments = watch("hasRefreshments");
+  const refreshmentQuantity = watch("refreshmentQuantity");
 
   const managersApi = useManagersApi();
-  const getManagers = useMemo(() => managersApi.getManagers, [managersApi]);
 
-  useEffect(() => {
-    const loadManagers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getManagers();
-        setManagers(data);
-      } catch (err) {
-        setError("Erro ao carregar gerentes");
-        console.error("Erro ao carregar gerentes:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const videoPlatforms = [
+    { value: "google-meet", label: "Google Meet" },
+    { value: "zoom", label: "Zoom" },
+    { value: "microsoft-teams", label: "Microsoft Teams" },
+    { value: "skype", label: "Skype" },
+    { value: "webex", label: "Cisco Webex" },
+    { value: "other", label: "Outro" },
+  ];
 
-    loadManagers();
-  }, [getManagers]);
+  const loadManagers = async () => {
+    if (managersLoaded || loading) return;
+
+    try {
+      setLoading(true);
+      const data = await managersApi.getManagers();
+      setManagers(data);
+      setManagersLoaded(true);
+    } catch (error) {
+      console.error("Erro ao carregar gerentes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -82,9 +95,17 @@ export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) 
         <div>
           <Label className="text-sm font-medium">
             <Users className="inline h-4 w-4 mr-1" />
-            Responsável (opcional)
+            Responsável *
           </Label>
-          <Select value={managerId} onValueChange={(value) => setValue("managerId", value)}>
+          <Select
+            value={managerId}
+            onValueChange={(value) => setValue("managerId", value)}
+            onOpenChange={(open) => {
+              if (open && !managersLoaded) {
+                loadManagers();
+              }
+            }}
+          >
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="Selecione o responsável" />
             </SelectTrigger>
@@ -96,7 +117,6 @@ export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) 
               ))}
             </SelectContent>
           </Select>
-          {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
         </div>
 
         <div>
@@ -122,9 +142,31 @@ export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) 
               onCheckedChange={(checked) => setValue("hasVideoCall", Boolean(checked))}
             />
             <Label htmlFor="hasVideoCall" className="text-sm font-medium leading-none">
+              <Video className="inline h-4 w-4 mr-1" />
               Reunião por vídeo chamada
             </Label>
           </div>
+
+          {hasVideoCall && (
+            <div className="ml-6">
+              <Label className="text-sm font-medium">Plataforma de vídeo *</Label>
+              <Select
+                value={videoPlatform}
+                onValueChange={(value) => setValue("videoPlatform", value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecione a plataforma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {videoPlatforms.map((platform) => (
+                    <SelectItem key={platform.value} value={platform.value}>
+                      {platform.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -137,6 +179,36 @@ export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) 
               Incluir coffee break
             </Label>
           </div>
+
+          {hasRefreshments && (
+            <div className="ml-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="refreshmentQuantity" className="text-sm font-medium">
+                  Quantidade *
+                </Label>
+                <Input
+                  id="refreshmentQuantity"
+                  type="number"
+                  min="1"
+                  value={refreshmentQuantity || ""}
+                  onChange={(e) => setValue("refreshmentQuantity", parseInt(e.target.value) || 0)}
+                  placeholder="Ex: 10"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="refreshmentDescription" className="text-sm font-medium">
+                  Descrição
+                </Label>
+                <Input
+                  id="refreshmentDescription"
+                  placeholder="Ex: Café e biscoitos"
+                  {...register("refreshmentDescription")}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Observações */}

@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,7 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Home } from "lucide-react";
+import { MapPin, Home, Building2 } from "lucide-react";
+import type { Location, Room } from "@/lib/mock-data";
 import useLocationsApi from "../hooks/api/useLocationsApi";
 import useRoomsApi from "../hooks/api/useRoomsApi";
 
@@ -17,99 +19,71 @@ interface BookingLocationProps {
 }
 
 export function BookingLocation({ form }: BookingLocationProps) {
+  const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [rooms, setRooms] = useState<RoomWithLocation[]>([]);
-  const [loadingLocations, setLoadingLocations] = useState(false);
-  const [loadingRooms, setLoadingRooms] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+
+  const { getLocations } = useLocationsApi();
+  const { getRooms } = useRoomsApi();
 
   const { setValue, watch } = form;
   const locationId = watch("locationId");
+  const customLocation = watch("customLocation");
   const roomId = watch("roomId");
 
-  const locationsApi = useLocationsApi();
-  const roomsApi = useRoomsApi();
-
-  const getLocations = useMemo(() => locationsApi.getLocations, [locationsApi]);
-  const getRooms = useMemo(() => roomsApi.getRooms, [roomsApi]);
-
+  // Carregar locais
   useEffect(() => {
     const loadLocations = async () => {
+      setIsLoadingLocations(true);
       try {
-        setLoadingLocations(true);
-        setError(null);
-        const data = await getLocations();
-        setLocations(data);
-      } catch (err) {
-        setError("Erro ao carregar localizações");
-        console.error("Erro ao carregar localizações:", err);
+        const fetchedLocations = await getLocations();
+        setLocations(fetchedLocations);
+      } catch (error) {
+        console.error("Erro ao carregar locais:", error);
       } finally {
-        setLoadingLocations(false);
+        setIsLoadingLocations(false);
       }
     };
 
     loadLocations();
   }, [getLocations]);
 
+  // Carregar salas quando o local mudar
   useEffect(() => {
-    const loadRooms = async () => {
-      try {
-        setLoadingRooms(true);
-        setError(null);
-        const params = locationId ? { location_id: locationId } : {};
-        const data = await getRooms(params);
-        setRooms(data);
+    if (!locationId) {
+      setRooms([]);
+      return;
+    }
 
-        // Reset room selection if current room is not in new list
-        if (roomId && !data.find((room) => room.id === roomId)) {
-          setValue("roomId", "");
-        }
-      } catch (err) {
-        setError("Erro ao carregar salas");
-        console.error("Erro ao carregar salas:", err);
-        setRooms([]);
+    const loadRooms = async () => {
+      setIsLoadingRooms(true);
+      try {
+        const fetchedRooms = await getRooms({ location_id: locationId });
+        setRooms(fetchedRooms);
+      } catch (error) {
+        console.error("Erro ao carregar salas:", error);
       } finally {
-        setLoadingRooms(false);
+        setIsLoadingRooms(false);
       }
     };
 
     loadRooms();
-  }, [locationId, getRooms, roomId, setValue]);
+  }, [locationId, getRooms]);
 
-  if (loadingLocations) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MapPin className="h-5 w-5 text-purple-600" />
-            Local
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error && locations.length === 0) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MapPin className="h-5 w-5 text-purple-600" />
-            Local
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-6">
-          <div className="text-red-600 text-sm">{error}</div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleLocationChange = (value: string) => {
+    if (value === "custom") {
+      setUseCustomLocation(true);
+      setValue("locationId", "");
+      setValue("customLocation", "");
+    } else {
+      setUseCustomLocation(false);
+      setValue("locationId", value);
+      setValue("customLocation", "");
+    }
+    setValue("roomId", "");
+  };
 
   return (
     <Card className="shadow-sm">
@@ -126,7 +100,10 @@ export function BookingLocation({ form }: BookingLocationProps) {
               <Home className="inline h-4 w-4 mr-1" />
               Localização *
             </Label>
-            <Select value={locationId} onValueChange={(value) => setValue("locationId", value)}>
+            <Select
+              value={useCustomLocation ? "custom" : locationId}
+              onValueChange={handleLocationChange}
+            >
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Selecione a localização" />
               </SelectTrigger>
@@ -136,8 +113,21 @@ export function BookingLocation({ form }: BookingLocationProps) {
                     {location.name}
                   </SelectItem>
                 ))}
+                <SelectItem value="custom">
+                  <Building2 className="inline h-4 w-4 mr-1" />
+                  Outra localização...
+                </SelectItem>
               </SelectContent>
             </Select>
+
+            {useCustomLocation && (
+              <Input
+                value={customLocation}
+                onChange={(e) => setValue("customLocation", e.target.value)}
+                placeholder="Digite a localização"
+                className="mt-2"
+              />
+            )}
           </div>
 
           <div>
@@ -145,26 +135,26 @@ export function BookingLocation({ form }: BookingLocationProps) {
               <MapPin className="inline h-4 w-4 mr-1" />
               Sala *
             </Label>
-            <Select
-              value={roomId}
-              onValueChange={(value) => setValue("roomId", value)}
-              disabled={!locationId || loadingRooms}
-            >
+            <Select value={roomId} onValueChange={(value) => setValue("roomId", value)}>
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder={loadingRooms ? "Carregando..." : "Selecione a sala"} />
+                <SelectValue placeholder="Selecione a sala" />
               </SelectTrigger>
               <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name} {room.capacity && `(${room.capacity} pessoas)`}
+                {rooms.length === 0 ? (
+                  <SelectItem value="no-rooms" disabled>
+                    Nenhuma sala disponível
                   </SelectItem>
-                ))}
+                ) : (
+                  rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name} {room.capacity && `(${room.capacity} pessoas)`}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
         </div>
-
-        {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
       </CardContent>
     </Card>
   );
