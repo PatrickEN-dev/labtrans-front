@@ -31,7 +31,10 @@ export function StatusBadge({ status, children }: StatusBadgeProps) {
   };
 
   return (
-    <div className={`flex justify-between items-center p-2 ${config.bgColor} rounded`}>
+    <div
+      className={`flex justify-between items-center p-2 ${config.bgColor} rounded`}
+      suppressHydrationWarning
+    >
       <span className="text-sm font-medium">{children}</span>
       <span className={`text-xs ${config.textColor} ${config.badgeColor} px-2 py-1 rounded-full`}>
         {statusText[status]}

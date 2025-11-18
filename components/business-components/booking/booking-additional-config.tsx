@@ -43,7 +43,6 @@ export function BookingAdditionalConfig({ form }: BookingAdditionalConfigProps) 
     { value: "zoom", label: "Zoom" },
     { value: "microsoft-teams", label: "Microsoft Teams" },
     { value: "skype", label: "Skype" },
-    { value: "webex", label: "Cisco Webex" },
     { value: "other", label: "Outro" },
   ];
 

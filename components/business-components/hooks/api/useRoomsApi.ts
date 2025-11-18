@@ -39,7 +39,7 @@ const useRoomsApi = () => {
           return queryString ? `?${queryString}` : "";
         };
 
-        const rooms = await api.get<Room[]>(`/rooms${buildQueryString(params)}`);
+        const rooms = await api.get<Room[]>(`/rooms${buildQueryString(params)}/`);
         return rooms;
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);

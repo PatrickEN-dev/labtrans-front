@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { getMockLocations, MOCK_LOCATIONS, type Location } from "@/lib/mock-data";
-import useApi from "@/components/generic-components/hooks/useApi";
 
 interface LocationQueryParams {
   search?: string;
@@ -19,56 +18,33 @@ interface UpdateLocationData {
 }
 
 const useLocationsApi = () => {
-  const api = useApi();
-
   const getLocations = useCallback(
     async (params: LocationQueryParams = {}): Promise<Location[]> => {
-      try {
-        // Tentar API real primeiro
-        const buildQueryString = (params: LocationQueryParams): string => {
-          const searchParams = new URLSearchParams();
-          if (params.search) searchParams.append("search", params.search);
-          const queryString = searchParams.toString();
-          return queryString ? `?${queryString}` : "";
-        };
+      // Usar apenas dados mockados
+      console.log("Usando dados mockados para locations");
 
-        const locations = await api.get<Location[]>(`/locations${buildQueryString(params)}`);
-        return locations;
-      } catch (error) {
-        console.warn("Erro na API real, usando dados mockados:", error);
-        // Fallback para dados mockados
-        const locations = await getMockLocations();
+      const locations = await getMockLocations();
 
-        if (params.search) {
-          return locations.filter((location) =>
-            location.name.toLowerCase().includes(params.search!.toLowerCase())
-          );
-        }
-
-        return locations;
+      if (params.search) {
+        return locations.filter((location) =>
+          location.name.toLowerCase().includes(params.search!.toLowerCase())
+        );
       }
+
+      return locations;
     },
-    [api]
+    []
   );
 
-  const getLocation = useCallback(
-    async (id: string): Promise<Location> => {
-      try {
-        // Tentar API real primeiro
-        const location = await api.get<Location>(`/locations/${id}/`);
-        return location;
-      } catch (error) {
-        console.warn("Erro na API real, usando dados mockados:", error);
-        // Fallback para dados mockados
-        const location = MOCK_LOCATIONS.find((l) => l.id === id);
-        if (!location) {
-          throw new Error("Location not found");
-        }
-        return location;
-      }
-    },
-    [api]
-  );
+  const getLocation = useCallback(async (id: string): Promise<Location> => {
+    console.log("Usando dados mockados para location:", id);
+
+    const location = MOCK_LOCATIONS.find((l) => l.id === id);
+    if (!location) {
+      throw new Error("Location not found");
+    }
+    return location;
+  }, []);
 
   const createLocation = useCallback(async (data: CreateLocationData): Promise<Location> => {
     const newLocation: Location = {

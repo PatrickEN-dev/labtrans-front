@@ -22,55 +22,61 @@ export function BookingLocation({ form }: BookingLocationProps) {
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
 
-  const { getLocations } = useLocationsApi();
-  const { getRooms } = useRoomsApi();
+  const locationsApi = useLocationsApi();
+  const roomsApi = useRoomsApi();
 
   const { setValue, watch } = form;
   const locationId = watch("locationId");
   const customLocation = watch("customLocation");
   const roomId = watch("roomId");
 
-  // Carregar locais
   useEffect(() => {
+    let isMounted = true;
+
     const loadLocations = async () => {
-      setIsLoadingLocations(true);
       try {
-        const fetchedLocations = await getLocations();
-        setLocations(fetchedLocations);
+        const fetchedLocations = await locationsApi.getLocations();
+        if (isMounted) {
+          setLocations(fetchedLocations);
+        }
       } catch (error) {
         console.error("Erro ao carregar locais:", error);
-      } finally {
-        setIsLoadingLocations(false);
       }
     };
 
     loadLocations();
-  }, [getLocations]);
 
-  // Carregar salas quando o local mudar
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
+    let isMounted = true;
+
     if (!locationId) {
       setRooms([]);
       return;
     }
 
     const loadRooms = async () => {
-      setIsLoadingRooms(true);
       try {
-        const fetchedRooms = await getRooms({ location_id: locationId });
-        setRooms(fetchedRooms);
+        const fetchedRooms = await roomsApi.getRooms({ location_id: locationId });
+        if (isMounted) {
+          setRooms(fetchedRooms);
+        }
       } catch (error) {
         console.error("Erro ao carregar salas:", error);
-      } finally {
-        setIsLoadingRooms(false);
       }
     };
 
     loadRooms();
-  }, [locationId, getRooms]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [locationId]);
 
   const handleLocationChange = (value: string) => {
     if (value === "custom") {

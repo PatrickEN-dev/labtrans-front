@@ -10,7 +10,7 @@ import {
   BookingDateTime,
   BookingAdditionalConfig,
 } from "./booking";
-import { fullBookingSchema, type BookingFormData, validateStep } from "@/lib/booking-schemas";
+import { fullBookingSchema, type BookingFormData } from "@/lib/booking-schemas";
 import { toast } from "sonner";
 import {
   FileText,
@@ -94,28 +94,20 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
   const handleSubmit = useCallback(async () => {
     try {
       setIsSubmitting(true);
-      const formData = form.getValues();
 
-      let allStepsValid = true;
-      for (let i = 0; i < STEPS.length; i++) {
-        const validation = validateStep(i, formData);
-        if (!validation.success) {
-          allStepsValid = false;
-          const firstError =
-            validation.error?.issues[0]?.message || "Campos obrigatórios não preenchidos";
-          toast.error(`Erro no passo ${i + 1}: ${firstError}`);
-          setCurrentStep(i);
-          break;
-        }
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast.error("Preencha todos os campos obrigatórios corretamente");
+        return;
       }
 
-      if (!allStepsValid) return;
+      const formData = form.getValues();
 
-      // Construir start_date e end_date no formato correto da API
+      // Construir dados para API
       const startDateTime = `${formData.date}T${formData.startTime}:00Z`;
       const endDateTime = `${formData.date}T${formData.endTime}:00Z`;
 
-      const bookingData: CreateBookingData = {
+      const bookingData = {
         room: formData.roomId,
         manager: formData.managerId,
         start_date: startDateTime,
@@ -139,22 +131,34 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
   }, [form, bookingsApi, handleClose]);
 
   const handleNext = useCallback(async () => {
-    const currentStepData = form.getValues();
-    console.log("Dados do step atual:", currentStep, currentStepData); // Debug
-    const validation = validateStep(currentStep, currentStepData);
-    console.log("Resultado da validação:", validation); // Debug
+    // Valida apenas os campos do step atual de forma simples
+    let fieldsToValidate: (keyof BookingFormData)[] = [];
 
-    if (validation.success) {
+    switch (currentStep) {
+      case 0:
+        fieldsToValidate = ["title", "description"];
+        break;
+      case 1:
+        fieldsToValidate = ["locationId", "roomId"];
+        break;
+      case 2:
+        fieldsToValidate = ["date", "startTime", "endTime"];
+        break;
+      case 3:
+        fieldsToValidate = ["managerId", "numberOfParticipants"];
+        break;
+    }
+
+    const isValid = await form.trigger(fieldsToValidate);
+
+    if (isValid) {
       if (currentStep < STEPS.length - 1) {
         setCurrentStep((prev) => prev + 1);
       } else {
         await handleSubmit();
       }
     } else {
-      console.error("Erro de validação:", validation.error); // Debug
-      const firstError =
-        validation.error?.issues[0]?.message || "Campos obrigatórios não preenchidos";
-      toast.error(firstError);
+      toast.error("Preencha os campos obrigatórios antes de continuar");
     }
   }, [currentStep, form, handleSubmit]);
 
@@ -166,27 +170,15 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
 
   const handleStepClick = useCallback(
     (stepIndex: number) => {
-      // Só permitir navegar para steps anteriores ou o atual
-      if (stepIndex <= currentStep) {
+      // Permite navegar apenas para steps anteriores
+      if (stepIndex < currentStep) {
         setCurrentStep(stepIndex);
-        return;
-      }
-
-      // Para steps futuros, validar o step atual primeiro
-      const currentStepData = form.getValues();
-      const validation = validateStep(currentStep, currentStepData);
-      if (validation.success) {
-        setCurrentStep(stepIndex);
-      } else {
-        const firstError =
-          validation.error?.issues[0]?.message || "Preencha os campos obrigatórios";
-        toast.error(firstError);
       }
     },
-    [currentStep, form]
+    [currentStep]
   );
 
-  const renderStepContent = useCallback(() => {
+  const renderStepContent = () => {
     const stepProps = { form };
 
     switch (currentStep) {
@@ -201,16 +193,7 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
       default:
         return null;
     }
-  }, [currentStep, form]);
-
-  // Verificação simples do step atual
-  const checkCanProceed = () => {
-    const currentStepData = form.getValues();
-    const validation = validateStep(currentStep, currentStepData);
-    return validation.success;
   };
-
-  const canProceed = checkCanProceed();
 
   const footer = (
     <div className="flex items-center justify-between px-6 py-4 border-t">
@@ -229,13 +212,13 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
         {currentStep === STEPS.length - 1 ? (
           <Button
             onClick={handleSubmit}
-            disabled={!canProceed || isSubmitting}
+            disabled={isSubmitting}
             className="flex items-center gap-2"
           >
             {isSubmitting ? "Criando..." : "Criar Reserva"}
           </Button>
         ) : (
-          <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
+          <Button onClick={handleNext} className="flex items-center gap-2">
             Próximo
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -244,9 +227,8 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
     </div>
   );
 
-  const formErrors = form.formState.errors;
-  const hasErrors = !canProceed && Object.keys(formErrors).length > 0;
-  const firstError = Object.values(formErrors)[0]?.message as string;
+  const formErrors = Object.values(form.formState.errors);
+  const firstError = formErrors[0]?.message as string;
 
   return (
     <Modal
@@ -269,7 +251,7 @@ export function BookingModalSteps({ open, onClose }: BookingModalProps) {
         </div>
 
         <div className="min-h-[400px]">
-          {hasErrors && firstError && (
+          {firstError && (
             <div className="mb-4 p-3 border border-red-200 bg-red-50 rounded-lg flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
               <span className="text-red-800 text-sm">{firstError}</span>
