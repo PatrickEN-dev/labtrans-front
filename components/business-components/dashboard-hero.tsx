@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { HeroSection } from "@/components/generic-components/hero-section";
 import { ActionButton } from "@/components/generic-components/action-button";
-import { BookingModalSteps } from "./booking-modal-steps";
+import { BookingModal } from "./booking-modal";
 import { Plus, Calendar } from "lucide-react";
 
 export function DashboardHero() {
@@ -24,18 +24,19 @@ export function DashboardHero() {
         >
           Nova Reserva
         </ActionButton>
-        <ActionButton
-          icon={Calendar}
-          variant="outline"
-          size="lg"
-          className="px-8"
-          onClick={() => console.log("Ver agenda")}
-        >
-          Ver Agenda
-        </ActionButton>
+        <div className="opacity-50 cursor-not-allowed">
+          <ActionButton
+            icon={Calendar}
+            variant="outline"
+            size="lg"
+            className="px-8 pointer-events-none"
+          >
+            Ver Agenda (Em breve)
+          </ActionButton>
+        </div>
       </HeroSection>
 
-      <BookingModalSteps open={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} />
+      <BookingModal open={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} />
     </>
   );
 }

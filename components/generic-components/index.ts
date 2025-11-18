@@ -6,4 +6,5 @@ export { HeroSection } from "./hero-section";
 export { StatusBadge } from "./status-badge";
 export { TermsModal } from "./terms-modal";
 export { Stepper } from "./stepper";
+export { ClientOnly } from "./client-only";
 export type { Step } from "./stepper";

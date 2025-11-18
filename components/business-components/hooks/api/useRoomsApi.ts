@@ -39,29 +39,36 @@ const useRoomsApi = () => {
           return queryString ? `?${queryString}` : "";
         };
 
-        const rooms = await api.get<Room[]>(`/rooms${buildQueryString(params)}/`);
-        return rooms;
+        const realRooms = await api.get<Room[]>(`/rooms${buildQueryString(params)}/`);
+
+        // Se há dados reais, usar apenas eles
+        if (realRooms && realRooms.length > 0) {
+          console.log("Usando dados reais da API para rooms");
+          return realRooms;
+        }
       } catch (error) {
-        console.warn("Erro na API real, usando dados mockados:", error);
-
-        let rooms: Room[];
-
-        if (params.location_id) {
-          rooms = await getMockRoomsByLocation(params.location_id);
-        } else {
-          rooms = await getMockAllRooms();
-        }
-
-        if (params.capacity_min) {
-          rooms = rooms.filter((room) => !room.capacity || room.capacity >= params.capacity_min!);
-        }
-
-        if (params.capacity_max) {
-          rooms = rooms.filter((room) => !room.capacity || room.capacity <= params.capacity_max!);
-        }
-
-        return rooms;
+        console.warn("API não disponível, usando dados mockados:", error);
       }
+
+      // Fallback para dados mockados se API falhou ou não tem dados
+      console.log("Usando dados mockados para rooms (primeira vez)");
+      let rooms: Room[];
+
+      if (params.location_id) {
+        rooms = await getMockRoomsByLocation(params.location_id);
+      } else {
+        rooms = await getMockAllRooms();
+      }
+
+      if (params.capacity_min) {
+        rooms = rooms.filter((room) => !room.capacity || room.capacity >= params.capacity_min!);
+      }
+
+      if (params.capacity_max) {
+        rooms = rooms.filter((room) => !room.capacity || room.capacity <= params.capacity_max!);
+      }
+
+      return rooms;
     },
     [api]
   );
@@ -69,7 +76,6 @@ const useRoomsApi = () => {
   const getRoom = useCallback(
     async (id: string): Promise<Room> => {
       try {
-        // Tentar API real primeiro
         const room = await api.get<Room>(`/rooms/${id}/`);
         return room;
       } catch (error) {
@@ -85,15 +91,26 @@ const useRoomsApi = () => {
     [api]
   );
 
-  const createRoom = useCallback(async (data: CreateRoomData): Promise<Room> => {
-    const newRoom: Room = {
-      id: `room-${Date.now()}`,
-      ...data,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    return new Promise((resolve) => setTimeout(() => resolve(newRoom), 300));
-  }, []);
+  const createRoom = useCallback(
+    async (data: CreateRoomData): Promise<Room> => {
+      try {
+        console.log("Criando room via API real:", data);
+        const newRoom = await api.post<Room>("/rooms/", data);
+        return newRoom;
+      } catch (error) {
+        console.warn("Erro ao criar room via API, simulando criação:", error);
+
+        const newRoom: Room = {
+          id: `room-${Date.now()}`,
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return new Promise((resolve) => setTimeout(() => resolve(newRoom), 300));
+      }
+    },
+    [api]
+  );
 
   const updateRoom = useCallback(
     async (id: string, data: UpdateRoomData): Promise<Room> => {

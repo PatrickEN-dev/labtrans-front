@@ -10,8 +10,6 @@ interface LabTransTermsProps {
 export function LabTransTerms({ variant = "link", className = "" }: LabTransTermsProps) {
   const handleAccept = () => {
     console.log("Termos aceitos");
-    // Aqui você pode implementar a lógica de aceitação dos termos
-    // Por exemplo: salvar no localStorage, enviar para API, etc.
     localStorage.setItem("termos-aceitos", new Date().toISOString());
   };
 

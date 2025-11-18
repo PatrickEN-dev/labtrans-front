@@ -13,7 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BookingModalSteps } from "@/components/business-components/booking-modal-steps";
+import { BookingModal } from "@/components/business-components/booking-modal";
+import { BookingEditModal } from "@/components/business-components/booking-edit-modal";
 import { Calendar, Clock, MapPin, User, Coffee, Plus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -24,6 +25,8 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
 
   const bookingsApi = useBookingsApi();
@@ -52,7 +55,18 @@ export default function BookingsPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    loadBookings(); // Recarregar lista após fechar modal
+    loadBookings();
+  };
+
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking(booking);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingBooking(null);
+    loadBookings();
   };
 
   const handleDeleteBooking = async () => {
@@ -104,7 +118,6 @@ export default function BookingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reservas de Salas</h1>
@@ -116,7 +129,6 @@ export default function BookingsPage() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="p-4">
@@ -186,7 +198,6 @@ export default function BookingsPage() {
         </Card>
       </div>
 
-      {/* Lista de Reservas */}
       <div className="space-y-4">
         {bookings.length === 0 ? (
           <Card>
@@ -260,7 +271,12 @@ export default function BookingsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditBooking(booking)}
+                        className="flex items-center gap-1"
+                      >
                         <Edit className="h-4 w-4" />
                         Editar
                       </Button>
@@ -282,7 +298,13 @@ export default function BookingsPage() {
         )}
       </div>
 
-      <BookingModalSteps open={isModalOpen} onClose={handleCloseModal} />
+      <BookingModal open={isModalOpen} onClose={handleCloseModal} />
+
+      <BookingEditModal
+        open={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        booking={editingBooking}
+      />
 
       <AlertDialog open={!!bookingToDelete} onOpenChange={() => setBookingToDelete(null)}>
         <AlertDialogContent>

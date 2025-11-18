@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,92 +11,51 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Home, Building2 } from "lucide-react";
 import type { Location, Room } from "@/lib/mock-data";
-import useLocationsApi from "../hooks/api/useLocationsApi";
-import useRoomsApi from "../hooks/api/useRoomsApi";
 
 interface BookingLocationProps {
   form: any;
+  locations: Location[];
+  rooms: Room[];
 }
 
-export function BookingLocation({ form }: BookingLocationProps) {
+export function BookingLocation({ form, locations, rooms }: BookingLocationProps) {
   const [useCustomLocation, setUseCustomLocation] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-
-  const locationsApi = useLocationsApi();
-  const roomsApi = useRoomsApi();
-
   const { setValue, watch } = form;
   const locationId = watch("locationId");
   const customLocation = watch("customLocation");
   const roomId = watch("roomId");
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadLocations = async () => {
-      try {
-        const fetchedLocations = await locationsApi.getLocations();
-        if (isMounted) {
-          setLocations(fetchedLocations);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar locais:", error);
+  const handleLocationChange = useCallback(
+    (value: string) => {
+      if (value === "custom") {
+        setUseCustomLocation(true);
+        setValue("locationId", "");
+        setValue("customLocation", "");
+      } else {
+        setUseCustomLocation(false);
+        setValue("locationId", value);
+        setValue("customLocation", "");
       }
-    };
-
-    loadLocations();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!locationId) {
-      setRooms([]);
-      return;
-    }
-
-    const loadRooms = async () => {
-      try {
-        const fetchedRooms = await roomsApi.getRooms({ location_id: locationId });
-        if (isMounted) {
-          setRooms(fetchedRooms);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar salas:", error);
-      }
-    };
-
-    loadRooms();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [locationId]);
-
-  const handleLocationChange = (value: string) => {
-    if (value === "custom") {
-      setUseCustomLocation(true);
-      setValue("locationId", "");
-      setValue("customLocation", "");
-    } else {
-      setUseCustomLocation(false);
-      setValue("locationId", value);
-      setValue("customLocation", "");
-    }
-    setValue("roomId", "");
-  };
+      setValue("roomId", "");
+    },
+    [setValue]
+  );
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <MapPin className="h-5 w-5 text-purple-600" />
-          Local
+    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-linear-to-br from-white to-slate-50/50">
+      <CardHeader className="pb-4 bg-linear-to-r from-purple-50 to-blue-50 rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="p-2 bg-linear-to-br from-purple-500 to-blue-600 rounded-lg shadow-lg">
+            <MapPin className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <span className="bg-linear-to-r from-purple-700 to-blue-600 bg-clip-text text-transparent font-bold">
+              Localização & Ambiente
+            </span>
+            <p className="text-sm text-slate-500 font-normal mt-1">
+              Selecione o local e sala ideal
+            </p>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 px-6">
@@ -125,7 +84,6 @@ export function BookingLocation({ form }: BookingLocationProps) {
                 </SelectItem>
               </SelectContent>
             </Select>
-
             {useCustomLocation && (
               <Input
                 value={customLocation}
@@ -135,18 +93,29 @@ export function BookingLocation({ form }: BookingLocationProps) {
               />
             )}
           </div>
-
           <div>
             <Label className="text-sm font-medium">
               <MapPin className="inline h-4 w-4 mr-1" />
               Sala *
             </Label>
-            <Select value={roomId} onValueChange={(value) => setValue("roomId", value)}>
+            <Select
+              value={roomId}
+              onValueChange={(value) => setValue("roomId", value)}
+              disabled={!locationId}
+            >
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Selecione a sala" />
+                <SelectValue
+                  placeholder={
+                    !locationId
+                      ? "Selecione primeiro a localização"
+                      : rooms.length === 0
+                      ? "Nenhuma sala disponível"
+                      : "Selecione a sala"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {rooms.length === 0 ? (
+                {locationId && rooms.length === 0 ? (
                   <SelectItem value="no-rooms" disabled>
                     Nenhuma sala disponível
                   </SelectItem>

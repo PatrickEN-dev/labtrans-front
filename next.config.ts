@@ -11,12 +11,15 @@ const nextConfig: NextConfig = {
     // Melhora a performance de desenvolvimento
     optimizePackageImports: ["@radix-ui/react-icons", "lucide-react"],
   },
-  // Configurações para melhor hidratação
+
   reactStrictMode: true,
-  // Configurações de compilação
+
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
+
+  // swcMinify removido - é padrão no Next.js 13+
+  poweredByHeader: false,
 };
 
 export default nextConfig;

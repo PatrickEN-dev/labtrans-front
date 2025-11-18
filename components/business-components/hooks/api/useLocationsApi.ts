@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { getMockLocations, MOCK_LOCATIONS, type Location } from "@/lib/mock-data";
+import { getMockLocations, MOCK_LOCATIONS, type Location as MockLocation } from "@/lib/mock-data";
+import useApi from "@/components/generic-components/hooks/useApi";
 
 interface LocationQueryParams {
   search?: string;
@@ -11,75 +12,92 @@ interface CreateLocationData {
   description?: string;
 }
 
-interface UpdateLocationData {
-  name?: string;
-  address?: string;
-  description?: string;
-}
-
 const useLocationsApi = () => {
-  const getLocations = useCallback(
-    async (params: LocationQueryParams = {}): Promise<Location[]> => {
-      // Usar apenas dados mockados
-      console.log("Usando dados mockados para locations");
+  const api = useApi();
 
-      const locations = await getMockLocations();
+  const getLocations = useCallback(
+    async (params: LocationQueryParams = {}): Promise<MockLocation[]> => {
+      try {
+        // Tentar API real primeiro
+        const buildQueryString = (params: LocationQueryParams): string => {
+          const searchParams = new URLSearchParams();
+          if (params.search) searchParams.append("search", params.search);
+          const queryString = searchParams.toString();
+          return queryString ? `?${queryString}` : "";
+        };
+
+        const realLocations = await api.get<MockLocation[]>(
+          `/locations${buildQueryString(params)}/`
+        );
+        if (realLocations && realLocations.length > 0) {
+          console.log("Usando dados reais da API para locations");
+          return realLocations;
+        }
+      } catch (error) {
+        console.warn("API não disponível, usando dados mockados:", error);
+      }
+
+      // Fallback para dados mockados
+      console.log("Usando dados mockados para locations");
+      let locations = await getMockLocations();
 
       if (params.search) {
-        return locations.filter((location) =>
+        locations = locations.filter((location) =>
           location.name.toLowerCase().includes(params.search!.toLowerCase())
         );
       }
 
       return locations;
     },
-    []
+    [api]
   );
 
-  const getLocation = useCallback(async (id: string): Promise<Location> => {
-    console.log("Usando dados mockados para location:", id);
+  const getLocation = useCallback(
+    async (id: string): Promise<MockLocation> => {
+      console.log("Buscando location:", id);
 
-    const location = MOCK_LOCATIONS.find((l) => l.id === id);
-    if (!location) {
-      throw new Error("Location not found");
-    }
-    return location;
-  }, []);
+      const mockLocation = MOCK_LOCATIONS.find((l) => l.id === id);
+      if (mockLocation) {
+        return mockLocation;
+      }
 
-  const createLocation = useCallback(async (data: CreateLocationData): Promise<Location> => {
-    const newLocation: Location = {
-      id: `loc-${Date.now()}`,
-      ...data,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    return new Promise((resolve) => setTimeout(() => resolve(newLocation), 300));
-  }, []);
-
-  const updateLocation = useCallback(
-    async (id: string, data: UpdateLocationData): Promise<Location> => {
-      const location = await getLocation(id);
-      const updatedLocation = {
-        ...location,
-        ...data,
-        updated_at: new Date().toISOString(),
-      };
-      return new Promise((resolve) => setTimeout(() => resolve(updatedLocation), 300));
+      try {
+        const location = await api.get<MockLocation>(`/locations/${id}/`);
+        return location;
+      } catch {
+        throw new Error("Location not found");
+      }
     },
-    [getLocation]
+    [api]
   );
 
-  const deleteLocation = useCallback(async (): Promise<void> => {
-    // Simular exclusão
-    return new Promise((resolve) => setTimeout(() => resolve(), 200));
-  }, []);
+  const createLocation = useCallback(
+    async (data: CreateLocationData): Promise<MockLocation> => {
+      try {
+        // Tentar criar via API real
+        console.log("Criando location via API real:", data);
+        const newLocation = await api.post<MockLocation>("/locations/", data);
+        return newLocation;
+      } catch {
+        console.warn("Erro ao criar location via API, simulando criação:");
+        // Fallback - simular criação
+        const newLocation: MockLocation = {
+          id: `loc-${Date.now()}`,
+          ...data,
+          address: data.address || "Endereço não informado",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return new Promise((resolve) => setTimeout(() => resolve(newLocation), 300));
+      }
+    },
+    [api]
+  );
 
   return {
     getLocations,
     getLocation,
     createLocation,
-    updateLocation,
-    deleteLocation,
   };
 };
 

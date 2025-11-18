@@ -1,81 +1,46 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, Calendar, Coffee, BarChart3 } from "lucide-react";
-
-// Mock data - em uma aplicação real, estes dados viriam de uma API
-const mockMeetings = [
-  {
-    id: 1,
-    title: "Reunião de Planejamento",
-    room: "Sala A1",
-    time: "09:00 - 10:30",
-    responsible: "João Silva",
-    coffeeCount: 8,
-    type: "planning",
-    color: "blue",
-  },
-  {
-    id: 2,
-    title: "Apresentação Cliente",
-    room: "Sala B2",
-    time: "14:00 - 16:00",
-    responsible: "Maria Santos",
-    coffeeCount: 12,
-    type: "presentation",
-    color: "green",
-  },
-  {
-    id: 3,
-    title: "Revisão Semanal",
-    room: "Sala C1",
-    time: "16:30 - 17:30",
-    responsible: "Carlos Lima",
-    coffeeCount: 0,
-    type: "review",
-    color: "purple",
-  },
-];
+import { Clock, Calendar, Coffee, BarChart3 } from "lucide-react";
+import { ClientOnly } from "@/components/generic-components/client-only";
+import { useEffect, useState } from "react";
+import useBookingsApi from "./hooks/api/useBookingsApi";
 
 export function UpcomingMeetings() {
-  const getColorClasses = (color: string) => {
-    const colorMap = {
-      blue: {
-        bg: "bg-blue-50",
-        border: "border-blue-200",
-        iconBg: "bg-blue-600",
-        text: "text-blue-600",
-      },
-      green: {
-        bg: "bg-green-50",
-        border: "border-green-200",
-        iconBg: "bg-green-600",
-        text: "text-green-600",
-      },
-      purple: {
-        bg: "bg-purple-50",
-        border: "border-purple-200",
-        iconBg: "bg-purple-600",
-        text: "text-purple-600",
-      },
-    };
-    return colorMap[color as keyof typeof colorMap] || colorMap.blue;
-  };
+  const [todayBookings, setTodayBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const bookingsApi = useBookingsApi();
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "planning":
-        return Clock;
-      case "presentation":
-        return Users;
-      case "review":
-        return Calendar;
-      default:
-        return Clock;
-    }
+  useEffect(() => {
+    const loadTodayBookings = async () => {
+      try {
+        const bookings = await bookingsApi.getBookings();
+        const today = new Date().toDateString();
+        const filtered = bookings
+          .filter((booking: any) => {
+            const bookingDate = new Date(booking.start_date).toDateString();
+            return bookingDate === today;
+          })
+          .slice(0, 3);
+        setTodayBookings(filtered);
+      } catch (error) {
+        console.error("Erro ao carregar reuniões:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTodayBookings();
+  }, [bookingsApi]);
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
-    <div className="lg:col-span-2">
+    <div className="lg:col-span-2" suppressHydrationWarning={true}>
       <Card className="bg-white/70 backdrop-blur-sm border-white/50 shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -90,42 +55,58 @@ export function UpcomingMeetings() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {mockMeetings.map((meeting) => {
-            const colors = getColorClasses(meeting.color);
-            const IconComponent = getIcon(meeting.type);
-
-            return (
-              <div
-                key={meeting.id}
-                className={`flex items-center space-x-4 p-4 ${colors.bg} rounded-lg border ${colors.border}`}
-              >
-                <div
-                  className={`shrink-0 w-12 h-12 ${colors.iconBg} rounded-full flex items-center justify-center`}
-                >
-                  <IconComponent className="h-6 w-6 text-white" />
-                </div>
-                <div className="grow">
-                  <h3 className="font-semibold text-gray-900">{meeting.title}</h3>
-                  <p className="text-sm text-gray-600">
-                    {meeting.room} • {meeting.time}
-                  </p>
-                  <p className={`text-xs ${colors.text}`}>Responsável: {meeting.responsible}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {meeting.coffeeCount > 0 ? (
-                    <>
-                      <Coffee className="h-4 w-4 text-amber-600" />
-                      <span className="text-xs text-gray-500">
-                        Café: {meeting.coffeeCount} pessoas
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-gray-500">Sem café</span>
-                  )}
+          <ClientOnly>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <Clock className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Carregando reuniões...</p>
                 </div>
               </div>
-            );
-          })}
+            ) : todayBookings.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Nenhuma reunião agendada para hoje</p>
+                </div>
+              </div>
+            ) : (
+              todayBookings.map((booking: any) => (
+                <div
+                  key={booking.id}
+                  className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200"
+                  suppressHydrationWarning={true}
+                >
+                  <div
+                    className="shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center"
+                    suppressHydrationWarning={true}
+                  >
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="grow" suppressHydrationWarning={true}>
+                    <h3 className="font-semibold text-gray-900">{booking.name || "Reunião"}</h3>
+                    <p className="text-sm text-gray-600">
+                      {booking.room_name} • {formatTime(booking.start_date)} -{" "}
+                      {formatTime(booking.end_date)}
+                    </p>
+                    <p className="text-xs text-blue-600">Responsável: {booking.manager_name}</p>
+                  </div>
+                  <div className="flex items-center space-x-2" suppressHydrationWarning={true}>
+                    {booking.coffee_option ? (
+                      <>
+                        <Coffee className="h-4 w-4 text-amber-600" />
+                        <span className="text-xs text-gray-500">
+                          Café: {booking.coffee_quantity || 1} pessoas
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-500">Sem café</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </ClientOnly>
         </CardContent>
       </Card>
     </div>

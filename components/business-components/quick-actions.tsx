@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/components/generic-components/action-button";
-import { BookingModalSteps } from "./booking-modal-steps";
+import { BookingModal } from "./booking-modal";
 import { Plus, Calendar, MapPin, BarChart3, List } from "lucide-react";
 
 export function QuickActions() {
@@ -33,36 +33,39 @@ export function QuickActions() {
             </ActionButton>
           </Link>
 
-          <ActionButton
-            icon={Calendar}
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => console.log("Ver agenda")}
-          >
-            Ver Agenda
-          </ActionButton>
+          <div className="opacity-50 cursor-not-allowed">
+            <ActionButton
+              icon={Calendar}
+              variant="outline"
+              className="w-full justify-start pointer-events-none"
+            >
+              Ver Agenda (Em breve)
+            </ActionButton>
+          </div>
 
-          <ActionButton
-            icon={MapPin}
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => console.log("Gerenciar salas")}
-          >
-            Gerenciar Salas
-          </ActionButton>
+          <div className="opacity-50 cursor-not-allowed">
+            <ActionButton
+              icon={MapPin}
+              variant="outline"
+              className="w-full justify-start pointer-events-none"
+            >
+              Gerenciar Salas (Em breve)
+            </ActionButton>
+          </div>
 
-          <ActionButton
-            icon={BarChart3}
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => console.log("Relatórios")}
-          >
-            Relatórios
-          </ActionButton>
+          <div className="opacity-50 cursor-not-allowed">
+            <ActionButton
+              icon={BarChart3}
+              variant="outline"
+              className="w-full justify-start pointer-events-none"
+            >
+              Relatórios (Em breve)
+            </ActionButton>
+          </div>
         </CardContent>
       </Card>
 
-      <BookingModalSteps open={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} />
+      <BookingModal open={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} />
     </>
   );
 }

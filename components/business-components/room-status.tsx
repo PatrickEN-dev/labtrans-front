@@ -1,27 +1,22 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/generic-components/status-badge";
-
-// Mock data - em uma aplicação real, estes dados viriam de uma API
-const mockRooms = [
-  { id: 1, name: "Sala A1", status: "available" as const },
-  { id: 2, name: "Sala A2", status: "occupied" as const },
-  { id: 3, name: "Sala B1", status: "reserved" as const },
-  { id: 4, name: "Sala B2", status: "available" as const },
-];
 
 export function RoomStatus() {
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-white/50 shadow-lg">
       <CardHeader>
         <CardTitle className="text-lg text-gray-900">Status das Salas</CardTitle>
-        <CardDescription>Disponibilidade em tempo real</CardDescription>
+        <CardDescription>Funcionalidade em desenvolvimento</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {mockRooms.map((room) => (
-          <StatusBadge key={room.id} status={room.status}>
-            {room.name}
-          </StatusBadge>
-        ))}
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gray-200 rounded-lg mx-auto mb-3 flex items-center justify-center">
+              <span className="text-gray-400 text-sm">🚧</span>
+            </div>
+            <p className="text-sm text-gray-500">Status das salas em tempo real</p>
+            <p className="text-xs text-gray-400 mt-1">Disponível em breve</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

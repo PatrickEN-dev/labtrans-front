@@ -1,6 +1,25 @@
 import { useCallback, useMemo } from "react";
-import { getMockBookings, MOCK_BOOKINGS, type Booking } from "@/lib/mock-data";
+import { getMockBookings, MOCK_BOOKINGS, createMockBooking, type Booking } from "@/lib/mock-data";
 import useApi from "@/components/generic-components/hooks/useApi";
+
+interface BookingQueryParams {
+  room_id?: string;
+  manager_id?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+interface CreateBookingData {
+  room: string;
+  manager: string;
+  start_date: string;
+  end_date: string;
+  coffee_option?: boolean;
+  coffee_quantity?: number;
+  coffee_description?: string;
+}
+
+type UpdateBookingData = Partial<CreateBookingData>;
 
 const useBookingsApi = () => {
   const api = useApi();
@@ -26,22 +45,22 @@ const useBookingsApi = () => {
         let bookings = await getMockBookings();
 
         if (params.room_id) {
-          bookings = bookings.filter((booking) => booking.room === params.room_id);
+          bookings = bookings.filter((booking: Booking) => booking.room === params.room_id);
         }
 
         if (params.manager_id) {
-          bookings = bookings.filter((booking) => booking.manager === params.manager_id);
+          bookings = bookings.filter((booking: Booking) => booking.manager === params.manager_id);
         }
 
         if (params.start_date) {
           bookings = bookings.filter(
-            (booking) => new Date(booking.start_date) >= new Date(params.start_date!)
+            (booking: Booking) => new Date(booking.start_date) >= new Date(params.start_date!)
           );
         }
 
         if (params.end_date) {
           bookings = bookings.filter(
-            (booking) => new Date(booking.end_date) <= new Date(params.end_date!)
+            (booking: Booking) => new Date(booking.end_date) <= new Date(params.end_date!)
           );
         }
 
@@ -59,7 +78,7 @@ const useBookingsApi = () => {
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);
 
-        const booking = MOCK_BOOKINGS.find((b) => b.id === id);
+        const booking = MOCK_BOOKINGS.find((b: Booking) => b.id === id);
         if (!booking) {
           throw new Error("Booking not found");
         }
@@ -77,7 +96,6 @@ const useBookingsApi = () => {
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);
 
-        const { createMockBooking } = await import("@/lib/mock-data");
         const bookingData = {
           ...data,
           coffee_option: data.coffee_option ?? false,
@@ -96,7 +114,7 @@ const useBookingsApi = () => {
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);
 
-        const booking = MOCK_BOOKINGS.find((b) => b.id === id);
+        const booking = MOCK_BOOKINGS.find((b: Booking) => b.id === id);
         if (!booking) {
           throw new Error("Booking not found");
         }
@@ -114,7 +132,7 @@ const useBookingsApi = () => {
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);
 
-        const index = MOCK_BOOKINGS.findIndex((b) => b.id === id);
+        const index = MOCK_BOOKINGS.findIndex((b: Booking) => b.id === id);
         if (index === -1) {
           throw new Error("Booking not found");
         }

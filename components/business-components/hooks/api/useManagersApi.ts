@@ -33,29 +33,35 @@ const useManagersApi = () => {
           return queryString ? `?${queryString}` : "";
         };
 
-        const managers = await api.get<Manager[]>(`/managers${buildQueryString(params)}`);
-        return managers;
+        const realManagers = await api.get<Manager[]>(`/managers${buildQueryString(params)}`);
+
+        // Se há dados reais, usar apenas eles
+        if (realManagers && realManagers.length > 0) {
+          console.log("Usando dados reais da API para managers");
+          return realManagers;
+        }
       } catch (error) {
-        console.warn("Erro na API real, usando dados mockados:", error);
-        // Fallback para dados mockados
-        const managers = await getMockManagers();
-
-        if (params.search) {
-          return managers.filter(
-            (manager) =>
-              manager.name.toLowerCase().includes(params.search!.toLowerCase()) ||
-              manager.email.toLowerCase().includes(params.search!.toLowerCase())
-          );
-        }
-
-        if (params.email) {
-          return managers.filter((manager) =>
-            manager.email.toLowerCase().includes(params.email!.toLowerCase())
-          );
-        }
-
-        return managers;
+        console.warn("API não disponível, usando dados mockados:", error);
       }
+
+      console.log("Usando dados mockados para managers (primeira vez)");
+      const managers = await getMockManagers();
+
+      if (params.search) {
+        return managers.filter(
+          (manager: Manager) =>
+            manager.name.toLowerCase().includes(params.search!.toLowerCase()) ||
+            manager.email.toLowerCase().includes(params.search!.toLowerCase())
+        );
+      }
+
+      if (params.email) {
+        return managers.filter((manager: Manager) =>
+          manager.email.toLowerCase().includes(params.email!.toLowerCase())
+        );
+      }
+
+      return managers;
     },
     [api]
   );
@@ -69,7 +75,7 @@ const useManagersApi = () => {
       } catch (error) {
         console.warn("Erro na API real, usando dados mockados:", error);
         // Fallback para dados mockados
-        const manager = MOCK_MANAGERS.find((m) => m.id === id);
+        const manager = MOCK_MANAGERS.find((m: Manager) => m.id === id);
         if (!manager) {
           throw new Error("Manager not found");
         }
@@ -79,15 +85,27 @@ const useManagersApi = () => {
     [api]
   );
 
-  const createManager = useCallback(async (data: CreateManagerData): Promise<Manager> => {
-    const newManager: Manager = {
-      id: `mgr-${Date.now()}`,
-      ...data,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    return new Promise((resolve) => setTimeout(() => resolve(newManager), 300));
-  }, []);
+  const createManager = useCallback(
+    async (data: CreateManagerData): Promise<Manager> => {
+      try {
+        // Tentar criar via API real
+        console.log("Criando manager via API real:", data);
+        const newManager = await api.post<Manager>("/managers/", data);
+        return newManager;
+      } catch (error) {
+        console.warn("Erro ao criar manager via API, simulando criação:", error);
+        // Fallback - simular criação
+        const newManager: Manager = {
+          id: `mgr-${Date.now()}`,
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return new Promise((resolve) => setTimeout(() => resolve(newManager), 300));
+      }
+    },
+    [api]
+  );
 
   const updateManager = useCallback(
     async (id: string, data: UpdateManagerData): Promise<Manager> => {
@@ -102,12 +120,14 @@ const useManagersApi = () => {
     [getManager]
   );
 
-  const deleteManager = useCallback(async (id: string): Promise<void> => {
+  const deleteManager = useCallback(async (): Promise<void> => {
     return new Promise((resolve) => setTimeout(() => resolve(), 200));
   }, []);
 
   const getManagerByEmail = useCallback(async (email: string): Promise<Manager> => {
-    const manager = MOCK_MANAGERS.find((m) => m.email.toLowerCase() === email.toLowerCase());
+    const manager = MOCK_MANAGERS.find(
+      (m: Manager) => m.email.toLowerCase() === email.toLowerCase()
+    );
     if (!manager) {
       throw new Error("Manager not found");
     }

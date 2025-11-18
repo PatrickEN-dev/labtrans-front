@@ -4,4 +4,5 @@ export { UpcomingMeetings } from "./upcoming-meetings";
 export { QuickActions } from "./quick-actions";
 export { RoomStatus } from "./room-status";
 export { LabTransTerms } from "./labtrans-terms";
-export { BookingModalSteps } from "./booking-modal-steps";
+export { BookingModal } from "./booking-modal";
+export { BookingEditModal } from "./booking-edit-modal";

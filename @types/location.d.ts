@@ -1,7 +1,10 @@
-interface Location extends BaseEntity {
+interface Location {
+  id: string;
   name: string;
-  address?: string;
+  address: string;
   description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CreateLocationData {

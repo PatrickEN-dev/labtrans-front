@@ -7,9 +7,12 @@ interface FooterProps {
 export function Footer({ showTerms = true }: FooterProps) {
   return (
     <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 mt-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="text-center md:text-left">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" suppressHydrationWarning={true}>
+        <div
+          className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0"
+          suppressHydrationWarning={true}
+        >
+          <div className="text-center md:text-left" suppressHydrationWarning={true}>
             <p className="text-sm text-gray-600">
               © 2025 LabTrans - Laboratório de Transportes e Logística
             </p>
@@ -17,7 +20,7 @@ export function Footer({ showTerms = true }: FooterProps) {
           </div>
 
           {showTerms && (
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4" suppressHydrationWarning={true}>
               <LabTransTerms variant="link" className="text-xs" />
               <span className="text-gray-300">|</span>
               <a

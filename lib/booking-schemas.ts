@@ -1,13 +1,5 @@
 import { z } from "zod";
 
-export const basicInfoSchema = z.object({
-  title: z
-    .string()
-    .min(3, "Título deve ter pelo menos 3 caracteres")
-    .max(100, "Título muito longo"),
-  description: z.string().optional(),
-});
-
 export const locationSchema = z
   .object({
     locationId: z.string().optional(),
@@ -48,27 +40,10 @@ export const dateTimeSchema = z
 export const additionalConfigSchema = z
   .object({
     managerId: z.string().min(1, "Responsável é obrigatório"),
-    numberOfParticipants: z.number().min(1, "Número de participantes deve ser pelo menos 1"),
-    hasVideoCall: z.boolean(),
-    videoPlatform: z.string().optional(),
     hasRefreshments: z.boolean(),
     refreshmentQuantity: z.number().optional(),
     refreshmentDescription: z.string().optional(),
-    equipmentNeeded: z.array(z.string()),
-    notes: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      if (data.hasVideoCall) {
-        return data.videoPlatform && data.videoPlatform.length > 0;
-      }
-      return true;
-    },
-    {
-      message: "Selecione uma plataforma para videochamada",
-      path: ["videoPlatform"],
-    }
-  )
   .refine(
     (data) => {
       if (data.hasRefreshments) {
@@ -84,24 +59,40 @@ export const additionalConfigSchema = z
 
 export const fullBookingSchema = z
   .object({
-    title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
-    description: z.string().optional(),
+    // Campos para seleção/criação de recursos
     locationId: z.string().optional(),
     customLocation: z.string().optional(),
     roomId: z.string().min(1, "Selecione uma sala"),
+    managerId: z.string().min(1, "Responsável é obrigatório"),
+
+    // Campos de data e hora
     date: z.string().min(1, "Selecione uma data"),
     startTime: z.string().min(1, "Selecione o horário de início"),
     endTime: z.string().min(1, "Selecione o horário de fim"),
-    managerId: z.string().min(1, "Responsável é obrigatório"),
-    numberOfParticipants: z.number().min(1, "Número de participantes deve ser pelo menos 1"),
-    hasVideoCall: z.boolean(),
-    videoPlatform: z.string().optional(),
+
+    // Campos que vão para a API
+    name: z.string().min(1, "Nome da reunião é obrigatório"),
+    description: z.string().optional(),
+    purpose: z.string().optional(),
     hasRefreshments: z.boolean(),
     refreshmentQuantity: z.number().optional(),
     refreshmentDescription: z.string().optional(),
-    equipmentNeeded: z.array(z.string()),
-    notes: z.string().optional(),
   })
+  .refine(
+    (data) => {
+      if (data.date) {
+        const selectedDate = new Date(data.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return selectedDate >= today;
+      }
+      return true;
+    },
+    {
+      message: "A data deve ser hoje ou no futuro",
+      path: ["date"],
+    }
+  )
   .refine(
     (data) => {
       if (data.startTime && data.endTime) {
@@ -127,18 +118,6 @@ export const fullBookingSchema = z
   )
   .refine(
     (data) => {
-      if (data.hasVideoCall) {
-        return data.videoPlatform && data.videoPlatform.length > 0;
-      }
-      return true;
-    },
-    {
-      message: "Selecione uma plataforma para videochamada",
-      path: ["videoPlatform"],
-    }
-  )
-  .refine(
-    (data) => {
       if (data.hasRefreshments) {
         return data.refreshmentQuantity && data.refreshmentQuantity > 0;
       }
@@ -150,7 +129,6 @@ export const fullBookingSchema = z
     }
   );
 
-export type BasicInfo = z.infer<typeof basicInfoSchema>;
 export type LocationData = z.infer<typeof locationSchema>;
 export type DateTimeData = z.infer<typeof dateTimeSchema>;
 export type AdditionalConfig = z.infer<typeof additionalConfigSchema>;
@@ -159,12 +137,10 @@ export type BookingFormData = z.infer<typeof fullBookingSchema>;
 export function validateStep(step: number, data: Partial<BookingFormData>) {
   switch (step) {
     case 0:
-      return basicInfoSchema.safeParse(data);
-    case 1:
       return locationSchema.safeParse(data);
-    case 2:
+    case 1:
       return dateTimeSchema.safeParse(data);
-    case 3:
+    case 2:
       return additionalConfigSchema.safeParse(data);
     default:
       return { success: false, error: { issues: [] } };
