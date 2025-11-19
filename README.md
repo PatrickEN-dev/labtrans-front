@@ -1,10 +1,10 @@
-# LabTrans UFSC - Sistema de Autenticação
+# LabTrans UFSC - Sistema de Agendamento
 
 Sistema web moderno e elegante para o Laboratório de Transportes e Logística da UFSC, desenvolvido com Next.js 15, React Hook Form, Zod e Shadcn/ui.
 
 ## ✨ Funcionalidades
 
-### 🔐 Sistema de Autenticação
+### 🔐 Sistema de Autenticação ( apenas visual ) 
 
 - **Página de Login** (`/login`) - Interface elegante com validação completa
 - **Página de Cadastro** (`/register`) - Formulário de registro com validação de senha forte
@@ -31,7 +31,7 @@ Sistema web moderno e elegante para o Laboratório de Transportes e Logística d
 ## 🛠️ Tecnologias Utilizadas
 
 - **Next.js 15** - Framework React com App Router
-- **React 19** - Biblioteca para interfaces de usuário
+- **React 18** - Biblioteca para interfaces de usuário
 - **TypeScript** - Tipagem estática para JavaScript
 - **Tailwind CSS 4** - Framework CSS utilitário
 - **Shadcn/ui** - Biblioteca de componentes
@@ -66,7 +66,7 @@ npm start
 - Informações sobre o laboratório
 - Acesso opcional (não obrigatório fazer login)
 
-### 🔑 Autenticação
+### 🔑 Autenticação (apenas visual )
 
 - **Login**: `/login` - Tela de entrada com email/senha
 - **Cadastro**: `/register` - Formulário de criação de conta
